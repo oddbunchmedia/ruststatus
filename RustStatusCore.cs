@@ -87,7 +87,7 @@ namespace Oxide.Plugins {
 
 		}
 
-        void Init() {
+		void Init() {
 
 			serverSecretKey = (string)Config["serverSecretKey"];
 			serverGroupSecretKey = (string)Config["serverGroupSecretKey"];
@@ -102,7 +102,7 @@ namespace Oxide.Plugins {
 				canSendToRustStatus = VerifyServerSecretKey();
 			}
 
-        }
+		}
 
 		void OnServerInitialized(bool initial) {
 
@@ -152,9 +152,9 @@ namespace Oxide.Plugins {
 			InitialiseOtherJobs();
 
 
-            // Send details
+			// Send details
 
-            SendServerDetails();
+			SendServerDetails();
 
 		}
 
@@ -253,28 +253,28 @@ namespace Oxide.Plugins {
 		}
 
 
-        // Server details
+		// Server details
 
-        void SendServerDetails() {
+		void SendServerDetails() {
 
 			if (canSendToRustStatus) {
 
-                var oxideVersion = Interface.Oxide.RootPluginManager.GetPlugin("RustCore").Version;
-                int maximumPlayerCount = ConVar.Server.maxplayers;
+				var oxideVersion = Interface.Oxide.RootPluginManager.GetPlugin("RustCore").Version;
+				int maximumPlayerCount = ConVar.Server.maxplayers;
 
-                string serverIPAddress = ConVar.Server.ip;
-                int serverPort = ConVar.Server.port;
+				string serverIPAddress = ConVar.Server.ip;
+				int serverPort = ConVar.Server.port;
 
-            	string pluginVersion = (Version).ToString();
+				string pluginVersion = (Version).ToString();
 				
-                int mapSize = ConVar.Server.worldsize;
-                int mapSeed = ConVar.Server.seed;
-                string levelURL = ConVar.Server.levelurl;
+				int mapSize = ConVar.Server.worldsize;
+				int mapSeed = ConVar.Server.seed;
+				string levelURL = ConVar.Server.levelurl;
 
-        		var datePluginLastInitialised = GetFormattedDate(); // change this to server side like wipe date
+				var datePluginLastInitialised = GetFormattedDate(); // change this to server side like wipe date
 
-                TimeZone localZone = TimeZone.CurrentTimeZone;
-                TimeSpan serverTimeZoneOffset = localZone.GetUtcOffset(DateTime.Now);
+				TimeZone localZone = TimeZone.CurrentTimeZone;
+				TimeSpan serverTimeZoneOffset = localZone.GetUtcOffset(DateTime.Now);
 
 				string path = "server/details/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
@@ -284,7 +284,7 @@ namespace Oxide.Plugins {
 
 			}
 
-        }
+		}
 
 
 		// Player count range
@@ -308,7 +308,7 @@ namespace Oxide.Plugins {
 				Config["highPlayerCount"] = playerCount;
 				Config["lowPlayerCount"] = playerCount;
 
-                playerCountRangeLastSent = GetTimestamp();
+				playerCountRangeLastSent = GetTimestamp();
 				Config["playerCountRangeLastSent"] = playerCountRangeLastSent;
 
 				SaveConfig();
@@ -383,7 +383,7 @@ namespace Oxide.Plugins {
 				Config["highFPS"] = fps;
 				Config["lowFPS"] = fps;
 
-                performanceRangeLastSent = GetTimestamp();
+				performanceRangeLastSent = GetTimestamp();
 				Config["performanceRangeLastSent"] = performanceRangeLastSent;
 
 				SaveConfig();

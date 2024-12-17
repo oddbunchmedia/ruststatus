@@ -21,7 +21,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.16")]
+	[Info("Rust Status", "ruststatus.com", "0.1.24")]
 	[Description("")]
 
 	class RustStatusCore : RustPlugin {
@@ -35,10 +35,17 @@ namespace Oxide.Plugins {
 		string serverName;
 		uint serverProtocol;
 
-		string discordWebhook;
+		string discordWebhookServerWipes;
+		string discordWebhookServerStatus;
+		string discordWebhookPlayerBanStatus;
 
 		bool suppressProtocolMismatchMessages = false;
+
 		bool useCentralisedBans = false;
+		
+		bool announcePlayerConnections = false;
+		bool announceNewPlayersOnly = false;
+		int announceWhenPlayerCount = 0;
 
 		bool canSendToRustStatus = false;
 
@@ -66,10 +73,16 @@ namespace Oxide.Plugins {
 
 			Config["serverSecretKey"] = "";
 			Config["serverGroupSecretKey"] = "";
-			
-			Config["discordWebhook"] = "";
+
+			Config["discordWebhookServerWipesOverride"] = "";
+			Config["discordWebhookServerStatusOverride"] = "";
+			Config["discordWebhookPlayerBanStatusOverride"] = "";
 			
 			Config["useCentralisedBans"] = false;
+			
+			Config["announcePlayerConnections"] = false;
+			Config["announceNewPlayersOnly"] = false;
+			Config["announceWhenPlayerCount"] = 0;
 			
 			Config["debug"] = false;
 
@@ -81,8 +94,6 @@ namespace Oxide.Plugins {
 			Config["lowFPS"] = 0;
 			Config["performanceRangeLastSent"] = 0;
 
-			Config["performanceRangeLastSent"] = 0;
-
 			SaveConfig();
 
 		}
@@ -92,15 +103,17 @@ namespace Oxide.Plugins {
 			serverSecretKey = (string)Config["serverSecretKey"];
 			serverGroupSecretKey = (string)Config["serverGroupSecretKey"];
 			
-			discordWebhook = (string)Config["discordWebhook"];
-			
 			useCentralisedBans = (bool)Config["useCentralisedBans"];
+			
+			announcePlayerConnections = (bool)Config["announcePlayerConnections"];
+			announceNewPlayersOnly = (bool)Config["announceNewPlayersOnly"];
+			announceWhenPlayerCount = (int)Config["announceWhenPlayerCount"];
 			
 			debug = (bool)Config["debug"];
 
-			if (serverSecretKey != "") {
-				canSendToRustStatus = VerifyServerSecretKey();
-			}
+			VerifyKeys();
+			
+			SetDiscordWebhooks();
 
 		}
 
@@ -129,7 +142,7 @@ namespace Oxide.Plugins {
 			}
 
 
-			// Server performance
+			// Server performance range
 
 			highFPS = (int)Config["highFPS"];
 
@@ -152,15 +165,51 @@ namespace Oxide.Plugins {
 			InitialiseOtherJobs();
 
 
-			// Send details
+			// Send server details
 
 			SendServerDetails();
 
 		}
 
-		bool VerifyServerSecretKey() {
+		void VerifyKeys() {
 
-			return true;
+			bool verified = false;
+
+			if ((serverGroupSecretKey != "") && (serverSecretKey != "")) {
+				verified = true;
+			}
+
+			canSendToRustStatus = verified;
+
+		}
+
+		void SetDiscordWebhooks() {
+
+			if (canSendToRustStatus) {
+
+				string path = "webhooks/fetch.php";
+				string endpoint = hostname + "/" + version + "/" + path;
+				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\"}";
+
+				webrequest.Enqueue(endpoint, payload, (code, response) => SetDiscordWebhooksCallback(code, response), this, RequestMethod.POST, header);
+
+			}
+
+		}
+
+		void SetDiscordWebhooksCallback(int code, string response) {
+
+			var json = JObject.Parse(response);
+
+			string status = (string)json["status"];
+
+			if (status == "ok") {
+
+				discordWebhookServerWipes = ((string)Config["discordWebhookServerWipesOverride"] == "") ? (string)json["webhooks"]["discordWebhookServerWipes"] : (string)Config["discordWebhookServerWipesOverride"];
+				discordWebhookServerStatus = ((string)Config["discordWebhookServerStatusOverride"] == "") ? (string)json["webhooks"]["discordWebhookServerStatus"] : (string)Config["discordWebhookServerStatusOverride"];
+				discordWebhookPlayerBanStatus = ((string)Config["discordWebhookPlayerBanStatusOverride"] == "") ? (string)json["webhooks"]["discordWebhookPlayerBanStatus"] : (string)Config["discordWebhookPlayerBanStatusOverride"];
+
+			}
 
 		}
 
@@ -241,10 +290,10 @@ namespace Oxide.Plugins {
 
 			}
 
-			if (discordWebhook != "") {
+			if (discordWebhookServerWipes != "") {
 
-				string endpoint = discordWebhook;
-				string payload = "{\"content\": \"The server **" + serverName + "** was wiped.\"}";
+				string endpoint = discordWebhookServerWipes;
+				string payload = "{\"content\": \"**" + serverName + "** was just wiped.\"}";
 
 				GenericWebRequest(endpoint, payload);
 
@@ -397,13 +446,13 @@ namespace Oxide.Plugins {
 
 		void OnClientAuth(Connection connection) {
 
-			if ((discordWebhook != "") && (suppressProtocolMismatchMessages == false)) {
+			if ((discordWebhookServerStatus != "") && (suppressProtocolMismatchMessages == false)) {
 
 				uint clientProtocol = connection.protocol;
 
 				if (clientProtocol > serverProtocol) {
 
-					string endpoint = discordWebhook;
+					string endpoint = discordWebhookServerStatus;
 					string payload = "{\"content\": \"There was a **Protocol Mismatch** on **" + serverName + "**. Server is **" + serverProtocol + "**, client is **" + clientProtocol + "**.\"}";
 
 					GenericWebRequest(endpoint, payload);
@@ -421,7 +470,7 @@ namespace Oxide.Plugins {
 
 		void OnUserBanned(string name, string id, string address, string reason) {
 
-			if (useCentralisedBans) {
+			if ((canSendToRustStatus) && (useCentralisedBans)) {
 
 				string path = "bans/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
@@ -431,17 +480,78 @@ namespace Oxide.Plugins {
 
 			}
 
+			if (discordWebhookPlayerBanStatus != "") {
+
+				string endpoint = discordWebhookPlayerBanStatus;
+				string payload = "{\"content\": \"**" + name + "** was banned from our servers. Their Steam profile can be viewed at: https://steamcommunity.com/profiles/" + id + "\"}";
+
+				GenericWebRequest(endpoint, payload);
+
+			}
+
 		}
 
 		void OnUserUnbanned(string name, string id, string address) {
 
-			if (useCentralisedBans) {
+			if ((canSendToRustStatus) && (useCentralisedBans)) {
 
 				string path = "bans/delete.php";
 				string endpoint = hostname + "/" + version + "/" + path;
 				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\"}";
 
 				GenericWebRequest(endpoint, payload);
+
+			}
+
+			if (discordWebhookPlayerBanStatus != "") {
+
+				string endpoint = discordWebhookPlayerBanStatus;
+				string payload = "{\"content\": \"**" + name + "** was **unbanned** from our servers.\"}";
+
+				GenericWebRequest(endpoint, payload);
+
+			}
+
+		}
+
+
+		// Player usage
+
+		void OnPlayerConnected(BasePlayer player) {
+
+			if (canSendToRustStatus) {
+
+				string playerSteamID = player.UserIDString;
+				string playerDisplayName = player.displayName;
+
+				string path = "players/connected.php";
+				string endpoint = hostname + "/" + version + "/" + path;
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"playerSteamID\":\"" + playerSteamID + "\"}";
+
+				webrequest.Enqueue(endpoint, payload, (code, response) => OnPlayerConnectedCallback(code, response, playerDisplayName), this, RequestMethod.POST, header);
+
+			}
+
+		}
+
+		void OnPlayerConnectedCallback(int code, string response, string playerDisplayName) {
+
+			var json = JObject.Parse(response);
+
+			string status = (string)json["status"];
+
+			if ((status == "ok") && (announcePlayerConnections)) {
+
+				string dateFirstJoined = (string)json["dateFirstJoined"];
+				string appearances = (string)json["appearances"];
+
+				if (appearances == "1") {
+					DoChat("<color=#FFE893>" + playerDisplayName + "</color> <color=#FFDB58>just connected: this is their</color> <color=#FFE893>first time joining the server</color><color=#FFDB58>.</color>");
+				} else {
+					if (announceNewPlayersOnly == false) {
+						DoChat("<color=#FFE893>" + playerDisplayName + "</color> <color=#FFDB58>just connected: they have been seen <color=#FFE893>" + appearances + " times</color> <color=#FFDB58>since the</color> <color=#FFE893>" + dateFirstJoined + "</color><color=#FFDB58>.</color>");
+					}
+				}
 
 			}
 
@@ -495,11 +605,9 @@ namespace Oxide.Plugins {
 
 		}
 
-		public static string Base64Encode(string plainText) {
+		void DoChat(string chat) {
 
-			var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
-
-			return System.Convert.ToBase64String(plainTextBytes);
+			rust.BroadcastChat(null, chat);
 
 		}
 

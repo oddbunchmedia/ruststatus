@@ -21,7 +21,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.24")]
+	[Info("Rust Status", "ruststatus.com", "0.1.25")]
 	[Description("")]
 
 	class RustStatusCore : RustPlugin {
@@ -158,6 +158,17 @@ namespace Oxide.Plugins {
 				SendHourlyPerformanceRange();
 			}
 
+
+			// Centralised bans
+
+			if (useCentralisedBans) {
+
+				string path = "bans/" + serverGroupSecretKey + "/";
+				string endpoint = hostname + "/" + version + "/" + path;
+
+				ConVar.Server.bansServerEndpoint = endpoint;
+
+			}
 
 			// Handle jobs
 

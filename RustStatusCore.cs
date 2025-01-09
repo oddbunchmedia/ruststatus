@@ -9,6 +9,8 @@ using Network;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
+using UnityEngine;
+
 using Oxide.Core;
 using Oxide.Core.Plugins;
 using Oxide.Core.Libraries;
@@ -21,8 +23,8 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.25")]
-	[Description("")]
+	[Info("Rust Status", "ruststatus.com", "0.1.38")]
+	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
 
@@ -57,11 +59,15 @@ namespace Oxide.Plugins {
 		int lowPlayerCount = 0;
 		int playerCountRangeLastSent;
 
-		int fps;
+		int fps = 0;
 
-		int highFPS;
-		int lowFPS;
+		int highFPS = 0;
+		int lowFPS = 0;
 		int performanceRangeLastSent;
+
+		int maximumFrameRate = 0;
+		int minimumFrameRate = 0;
+		int minimumFrameRatePercentage = 20;
 
 		private readonly Dictionary<string, string> header = new Dictionary<string, string> {
 			["Content-Type"] = "application/json"
@@ -94,6 +100,8 @@ namespace Oxide.Plugins {
 			Config["lowFPS"] = 0;
 			Config["performanceRangeLastSent"] = 0;
 
+			Config["minimumFrameRatePercentage"] = 20;
+
 			SaveConfig();
 
 		}
@@ -108,6 +116,8 @@ namespace Oxide.Plugins {
 			announcePlayerConnections = (bool)Config["announcePlayerConnections"];
 			announceNewPlayersOnly = (bool)Config["announceNewPlayersOnly"];
 			announceWhenPlayerCount = (int)Config["announceWhenPlayerCount"];
+
+			minimumFrameRatePercentage = (int)Config["minimumFrameRatePercentage"];
 			
 			debug = (bool)Config["debug"];
 
@@ -157,6 +167,14 @@ namespace Oxide.Plugins {
 			if (performanceRangeLastSent < hourAgo) {
 				SendHourlyPerformanceRange();
 			}
+
+
+			// Server frame rates
+
+			maximumFrameRate = Application.targetFrameRate;
+			minimumFrameRate = ((maximumFrameRate * minimumFrameRatePercentage) / 100);
+
+			SaveConfig();
 
 
 			// Centralised bans
@@ -215,11 +233,9 @@ namespace Oxide.Plugins {
 			string status = (string)json["status"];
 
 			if (status == "ok") {
-
 				discordWebhookServerWipes = ((string)Config["discordWebhookServerWipesOverride"] == "") ? (string)json["webhooks"]["discordWebhookServerWipes"] : (string)Config["discordWebhookServerWipesOverride"];
 				discordWebhookServerStatus = ((string)Config["discordWebhookServerStatusOverride"] == "") ? (string)json["webhooks"]["discordWebhookServerStatus"] : (string)Config["discordWebhookServerStatusOverride"];
 				discordWebhookPlayerBanStatus = ((string)Config["discordWebhookPlayerBanStatusOverride"] == "") ? (string)json["webhooks"]["discordWebhookPlayerBanStatus"] : (string)Config["discordWebhookPlayerBanStatusOverride"];
-
 			}
 
 		}
@@ -251,7 +267,7 @@ namespace Oxide.Plugins {
 					HandlePerformanceRangeData();
 				});
 
-				timer.Every(20f, () => {
+				timer.Every(15f, () => {
 					SendPing();
 				});
 
@@ -275,14 +291,6 @@ namespace Oxide.Plugins {
 				GenericWebRequest(endpoint, payload);
 
 			}
-
-		}
-
-		void UpdatePlayerCount() {
-
-			playerCount = BasePlayer.activePlayerList.Count;
-
-			UpdatePlayerCountRange();
 
 		}
 
@@ -399,6 +407,14 @@ namespace Oxide.Plugins {
 
 		}
 
+		void UpdatePlayerCount() {
+
+			playerCount = BasePlayer.activePlayerList.Count;
+
+			UpdatePlayerCountRange();
+
+		}
+
 
 		// Server performance
 
@@ -419,6 +435,25 @@ namespace Oxide.Plugins {
 				}
 
 				SaveConfig();
+
+
+				// Check against minimum framerate
+
+				if (fps < minimumFrameRate) {
+
+					if (discordWebhookServerStatus != "") {
+
+						string alertType = "low-frame-rate";
+
+						string path = "server/status/alert.php";
+						string endpoint = hostname + "/" + version + "/" + path;
+						string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\", \"currentFrameRate\":\"" + fps + "\", \"maximumFrameRate\":\"" + maximumFrameRate + "\"}";
+
+						GenericWebRequest(endpoint, payload);
+
+					}
+
+				}
 
 			}
 
@@ -463,8 +498,11 @@ namespace Oxide.Plugins {
 
 				if (clientProtocol > serverProtocol) {
 
-					string endpoint = discordWebhookServerStatus;
-					string payload = "{\"content\": \"There was a **Protocol Mismatch** on **" + serverName + "**. Server is **" + serverProtocol + "**, client is **" + clientProtocol + "**.\"}";
+					string alertType = "protocol-mismatch";
+
+					string path = "server/status/alert.php";
+					string endpoint = hostname + "/" + version + "/" + path;
+					string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\", \"clientProtocol\":\"" + clientProtocol + "\", \"serverProtocol\":\"" + serverProtocol + "\"}";
 
 					GenericWebRequest(endpoint, payload);
 
@@ -485,16 +523,7 @@ namespace Oxide.Plugins {
 
 				string path = "bans/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\", \"reason\":\"" + reason + "\"}";
-
-				GenericWebRequest(endpoint, payload);
-
-			}
-
-			if (discordWebhookPlayerBanStatus != "") {
-
-				string endpoint = discordWebhookPlayerBanStatus;
-				string payload = "{\"content\": \"**" + name + "** was banned from our servers. Their Steam profile can be viewed at: https://steamcommunity.com/profiles/" + id + "\"}";
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\", \"reason\":\"" + reason + "\", \"discordWebhook\":\"" + discordWebhookPlayerBanStatus + "\", \"serverName\":\"" + serverName + "\"}";
 
 				GenericWebRequest(endpoint, payload);
 
@@ -508,16 +537,7 @@ namespace Oxide.Plugins {
 
 				string path = "bans/delete.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\"}";
-
-				GenericWebRequest(endpoint, payload);
-
-			}
-
-			if (discordWebhookPlayerBanStatus != "") {
-
-				string endpoint = discordWebhookPlayerBanStatus;
-				string payload = "{\"content\": \"**" + name + "** was **unbanned** from our servers.\"}";
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\", \"discordWebhook\":\"" + discordWebhookPlayerBanStatus + "\"}";
 
 				GenericWebRequest(endpoint, payload);
 

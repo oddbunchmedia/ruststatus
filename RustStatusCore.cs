@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.38")]
+	[Info("Rust Status", "ruststatus.com", "0.1.42")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -44,6 +44,8 @@ namespace Oxide.Plugins {
 		bool suppressProtocolMismatchMessages = false;
 
 		bool useCentralisedBans = false;
+
+		bool doHourlyBroadcast = false;
 		
 		bool announcePlayerConnections = false;
 		bool announceNewPlayersOnly = false;
@@ -67,7 +69,7 @@ namespace Oxide.Plugins {
 
 		int maximumFrameRate = 0;
 		int minimumFrameRate = 0;
-		int minimumFrameRatePercentage = 20;
+		int minimumFrameRatePercentage = 15;
 
 		private readonly Dictionary<string, string> header = new Dictionary<string, string> {
 			["Content-Type"] = "application/json"
@@ -86,6 +88,8 @@ namespace Oxide.Plugins {
 			
 			Config["useCentralisedBans"] = false;
 			
+			Config["doHourlyBroadcast"] = false;
+			
 			Config["announcePlayerConnections"] = false;
 			Config["announceNewPlayersOnly"] = false;
 			Config["announceWhenPlayerCount"] = 0;
@@ -100,7 +104,7 @@ namespace Oxide.Plugins {
 			Config["lowFPS"] = 0;
 			Config["performanceRangeLastSent"] = 0;
 
-			Config["minimumFrameRatePercentage"] = 20;
+			Config["minimumFrameRatePercentage"] = 15;
 
 			SaveConfig();
 
@@ -112,6 +116,8 @@ namespace Oxide.Plugins {
 			serverGroupSecretKey = (string)Config["serverGroupSecretKey"];
 			
 			useCentralisedBans = (bool)Config["useCentralisedBans"];
+			
+			doHourlyBroadcast = (bool)Config["doHourlyBroadcast"];
 			
 			announcePlayerConnections = (bool)Config["announcePlayerConnections"];
 			announceNewPlayersOnly = (bool)Config["announceNewPlayersOnly"];
@@ -250,6 +256,8 @@ namespace Oxide.Plugins {
 
 					SendHourlyPlayerCountRange();
 					SendHourlyPerformanceRange();
+
+					PerformHourlyBroadcast();
 
 					InitialiseHourlyJobs();
 
@@ -447,7 +455,7 @@ namespace Oxide.Plugins {
 
 						string path = "server/status/alert.php";
 						string endpoint = hostname + "/" + version + "/" + path;
-						string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\", \"currentFrameRate\":\"" + fps + "\", \"maximumFrameRate\":\"" + maximumFrameRate + "\"}";
+						string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\", \"currentFrameRate\":\"" + fps + "\", \"minimumFrameRate\":\"" + minimumFrameRate + "\", \"maximumFrameRate\":\"" + maximumFrameRate + "\"}";
 
 						GenericWebRequest(endpoint, payload);
 
@@ -540,6 +548,47 @@ namespace Oxide.Plugins {
 				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\", \"discordWebhook\":\"" + discordWebhookPlayerBanStatus + "\"}";
 
 				GenericWebRequest(endpoint, payload);
+
+			}
+
+		}
+
+
+		// Hourly broadcast
+
+		void PerformHourlyBroadcast() {
+
+			if (doHourlyBroadcast) {
+
+				string path = "broadcast/fetch.php";
+				string endpoint = hostname + "/" + version + "/" + path;
+				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\"}";
+
+				webrequest.Enqueue(endpoint, payload, (code, response) => PerformHourlyBroadcastCallback(code, response), this, RequestMethod.POST, header);
+
+			}
+
+		}
+
+		void PerformHourlyBroadcastCallback(int code, string response) {
+
+			var json = JObject.Parse(response);
+
+			string status = (string)json["status"];
+			string hourlyBroadcast1 = (string)json["hourlyBroadcast1"];
+			string hourlyBroadcast2 = (string)json["hourlyBroadcast2"];
+
+			if (status == "ok") {
+
+				if (hourlyBroadcast1 != "") {
+					DoChat(hourlyBroadcast1);
+				}
+
+				if (hourlyBroadcast2 != "") {
+					timer.Once(3f, () => {
+						DoChat(hourlyBroadcast2);
+					});
+				}
 
 			}
 

@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.42")]
+	[Info("Rust Status", "ruststatus.com", "0.1.47")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -129,7 +129,7 @@ namespace Oxide.Plugins {
 
 			VerifyKeys();
 			
-			SetDiscordWebhooks();
+			InitialiseServer();
 
 		}
 
@@ -218,30 +218,46 @@ namespace Oxide.Plugins {
 
 		}
 
-		void SetDiscordWebhooks() {
+		void InitialiseServer() {
 
 			if (canSendToRustStatus) {
 
-				string path = "webhooks/fetch.php";
+				string path = "initialise/fetch.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\"}";
+				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\": \"" + serverSecretKey + "\"}";
 
-				webrequest.Enqueue(endpoint, payload, (code, response) => SetDiscordWebhooksCallback(code, response), this, RequestMethod.POST, header);
+				webrequest.Enqueue(endpoint, payload, (code, response) => InitialiseServerCallback(code, response), this, RequestMethod.POST, header);
 
 			}
 
 		}
 
-		void SetDiscordWebhooksCallback(int code, string response) {
+		void InitialiseServerCallback(int code, string response) {
 
 			var json = JObject.Parse(response);
 
-			string status = (string)json["status"];
+			if ((string)json["status"] == "ok") {
 
-			if (status == "ok") {
+				// Set Discord endpoints
+
 				discordWebhookServerWipes = ((string)Config["discordWebhookServerWipesOverride"] == "") ? (string)json["webhooks"]["discordWebhookServerWipes"] : (string)Config["discordWebhookServerWipesOverride"];
 				discordWebhookServerStatus = ((string)Config["discordWebhookServerStatusOverride"] == "") ? (string)json["webhooks"]["discordWebhookServerStatus"] : (string)Config["discordWebhookServerStatusOverride"];
 				discordWebhookPlayerBanStatus = ((string)Config["discordWebhookPlayerBanStatusOverride"] == "") ? (string)json["webhooks"]["discordWebhookPlayerBanStatus"] : (string)Config["discordWebhookPlayerBanStatusOverride"];
+			
+
+				// Set server description
+
+				if ((string)json["server"]["description"] != "") {
+					ConVar.Server.description = (string)json["server"]["description"];
+				}
+
+
+				// Set server header image
+
+				if ((string)json["server"]["headerimage"] != "") {
+					ConVar.Server.headerimage = (string)json["server"]["headerimage"];
+				}
+
 			}
 
 		}

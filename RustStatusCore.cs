@@ -590,11 +590,10 @@ namespace Oxide.Plugins {
 
 			var json = JObject.Parse(response);
 
-			string status = (string)json["status"];
-			string hourlyBroadcast1 = (string)json["hourlyBroadcast1"];
-			string hourlyBroadcast2 = (string)json["hourlyBroadcast2"];
+			if ((string)json["status"] == "ok") {
 
-			if (status == "ok") {
+				string hourlyBroadcast1 = (string)json["hourlyBroadcast1"];
+				string hourlyBroadcast2 = (string)json["hourlyBroadcast2"];
 
 				if (hourlyBroadcast1 != "") {
 					DoChat(hourlyBroadcast1);
@@ -634,9 +633,7 @@ namespace Oxide.Plugins {
 
 			var json = JObject.Parse(response);
 
-			string status = (string)json["status"];
-
-			if ((status == "ok") && (announcePlayerConnections)) {
+			if (((string)json["status"] == "ok") && (announcePlayerConnections)) {
 
 				string dateFirstJoined = (string)json["dateFirstJoined"];
 				string appearances = (string)json["appearances"];
@@ -673,14 +670,12 @@ namespace Oxide.Plugins {
 
 			var json = JObject.Parse(response);
 
-			string status = (string)json["status"];
-
-			if (status == "error") {
+			if ((string)json["status"] == "error") {
 
 				string message = (string)json["message"];
 				string endpoint = (string)json["endpoint"];
 
-				Puts("Status: " + status + " | Message: " + message + " | Endpoint: " + endpoint);
+				Puts("Status: error | Message: " + message + " | Endpoint: " + endpoint);
 
 			}
 

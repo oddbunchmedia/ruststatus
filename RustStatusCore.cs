@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.48")]
+	[Info("Rust Status", "ruststatus.com", "0.1.50")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -81,13 +81,8 @@ namespace Oxide.Plugins {
 
 			Config["serverSecretKey"] = "";
 			Config["serverGroupSecretKey"] = "";
-
-			Config["discordWebhookServerWipesOverride"] = "";
-			Config["discordWebhookServerStatusOverride"] = "";
-			Config["discordWebhookPlayerBanStatusOverride"] = "";
 			
 			Config["useCentralisedBans"] = false;
-			
 			Config["doHourlyBroadcast"] = false;
 			
 			Config["announcePlayerConnections"] = false;
@@ -112,6 +107,8 @@ namespace Oxide.Plugins {
 
 		void Init() {
 
+			serverName = ConVar.Server.hostname;
+
 			serverSecretKey = (string)Config["serverSecretKey"];
 			serverGroupSecretKey = (string)Config["serverGroupSecretKey"];
 			
@@ -135,7 +132,6 @@ namespace Oxide.Plugins {
 
 		void OnServerInitialized(bool initial) {
 
-			serverName = ConVar.Server.hostname;
 			serverProtocol = Rust.Protocol.network;
 
 			int hourAgo = GetTimestamp() - 3600;
@@ -240,9 +236,9 @@ namespace Oxide.Plugins {
 
 				// Set Discord endpoints
 
-				discordWebhookServerWipes = ((string)Config["discordWebhookServerWipesOverride"] == "") ? (string)json["webhooks"]["discordWebhookServerWipes"] : (string)Config["discordWebhookServerWipesOverride"];
-				discordWebhookServerStatus = ((string)Config["discordWebhookServerStatusOverride"] == "") ? (string)json["webhooks"]["discordWebhookServerStatus"] : (string)Config["discordWebhookServerStatusOverride"];
-				discordWebhookPlayerBanStatus = ((string)Config["discordWebhookPlayerBanStatusOverride"] == "") ? (string)json["webhooks"]["discordWebhookPlayerBanStatus"] : (string)Config["discordWebhookPlayerBanStatusOverride"];
+				discordWebhookServerWipes = (string)json["webhooks"]["discordWebhookServerWipes"];
+				discordWebhookServerStatus = (string)json["webhooks"]["discordWebhookServerStatus"];
+				discordWebhookPlayerBanStatus = (string)json["webhooks"]["discordWebhookPlayerBanStatus"];
 			
 
 				// Set server description
@@ -370,7 +366,7 @@ namespace Oxide.Plugins {
 
 				string path = "server/details/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverName\":\"" + serverName + "\", \"serverProtocol\":\"" + serverProtocol + "\", \"oxideVersion\":\"" + oxideVersion + "\", \"pluginVersion\":\"" + pluginVersion + "\", \"datePluginLastInitialised\":\"" + datePluginLastInitialised + "\", \"serverIPAddress\":\"" + serverIPAddress + "\", \"serverPort\":\"" + serverPort + "\", \"mapSize\":\"" + mapSize + "\", \"mapSeed\":\"" + mapSeed + "\", \"maximumPlayerCount\":\"" + maximumPlayerCount + "\", \"levelURL\":\"" + levelURL + "\", \"serverTimeZoneOffset\":\"" + serverTimeZoneOffset + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\"}";
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverName\":\"" + serverName + "\", \"serverProtocol\":\"" + serverProtocol + "\", \"oxideVersion\":\"" + oxideVersion + "\", \"pluginVersion\":\"" + pluginVersion + "\", \"datePluginLastInitialised\":\"" + datePluginLastInitialised + "\", \"serverIPAddress\":\"" + serverIPAddress + "\", \"serverPort\":\"" + serverPort + "\", \"mapSize\":\"" + mapSize + "\", \"mapSeed\":\"" + mapSeed + "\", \"maximumPlayerCount\":\"" + maximumPlayerCount + "\", \"levelURL\":\"" + levelURL + "\", \"serverTimeZoneOffset\":\"" + serverTimeZoneOffset + "\"}";
 
 				GenericWebRequest(endpoint, payload);
 

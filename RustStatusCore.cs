@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.50")]
+	[Info("Rust Status", "ruststatus.com", "0.1.52")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -107,8 +107,6 @@ namespace Oxide.Plugins {
 
 		void Init() {
 
-			serverName = ConVar.Server.hostname;
-
 			serverSecretKey = (string)Config["serverSecretKey"];
 			serverGroupSecretKey = (string)Config["serverGroupSecretKey"];
 			
@@ -132,6 +130,7 @@ namespace Oxide.Plugins {
 
 		void OnServerInitialized(bool initial) {
 
+			serverName = ConVar.Server.hostname;
 			serverProtocol = Rust.Protocol.network;
 
 			int hourAgo = GetTimestamp() - 3600;
@@ -330,6 +329,8 @@ namespace Oxide.Plugins {
 			}
 
 			if (discordWebhookServerWipes != "") {
+
+				serverName = ConVar.Server.hostname;
 
 				string endpoint = discordWebhookServerWipes;
 				string payload = "{\"content\": \"**" + serverName + "** was just wiped.\"}";

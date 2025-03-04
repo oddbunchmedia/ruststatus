@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.52")]
+	[Info("Rust Status", "ruststatus.com", "0.1.53")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -134,6 +134,21 @@ namespace Oxide.Plugins {
 			serverProtocol = Rust.Protocol.network;
 
 			int hourAgo = GetTimestamp() - 3600;
+
+
+			// Restart alert
+
+			if ((initial == true) && (discordWebhookServerStatus != "")) {
+
+				string alertType = "server-restart";
+
+				string path = "server/status/alert.php";
+				string endpoint = hostname + "/" + version + "/" + path;
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\"}";
+
+				GenericWebRequest(endpoint, payload);
+
+			}
 
 
 			// Player count range

@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.53")]
+	[Info("Rust Status", "ruststatus.com", "0.1.61")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -136,21 +136,6 @@ namespace Oxide.Plugins {
 			int hourAgo = GetTimestamp() - 3600;
 
 
-			// Restart alert
-
-			if ((initial == true) && (discordWebhookServerStatus != "")) {
-
-				string alertType = "server-restart";
-
-				string path = "server/status/alert.php";
-				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\"}";
-
-				GenericWebRequest(endpoint, payload);
-
-			}
-
-
 			// Player count range
 
 			highPlayerCount = (int)Config["highPlayerCount"];
@@ -204,15 +189,22 @@ namespace Oxide.Plugins {
 
 			}
 
+
+			// Send server details
+
+			int pluginReload = 1;
+
+			if (initial) {
+				pluginReload = 0;
+			}
+
+			SendServerDetails(pluginReload);
+
+
 			// Handle jobs
 
 			InitialiseHourlyJobs();
 			InitialiseOtherJobs();
-
-
-			// Send server details
-
-			SendServerDetails();
 
 		}
 
@@ -359,7 +351,7 @@ namespace Oxide.Plugins {
 
 		// Server details
 
-		void SendServerDetails() {
+		void SendServerDetails(int pluginReload) {
 
 			if (canSendToRustStatus) {
 
@@ -382,7 +374,7 @@ namespace Oxide.Plugins {
 
 				string path = "server/details/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverName\":\"" + serverName + "\", \"serverProtocol\":\"" + serverProtocol + "\", \"oxideVersion\":\"" + oxideVersion + "\", \"pluginVersion\":\"" + pluginVersion + "\", \"datePluginLastInitialised\":\"" + datePluginLastInitialised + "\", \"serverIPAddress\":\"" + serverIPAddress + "\", \"serverPort\":\"" + serverPort + "\", \"mapSize\":\"" + mapSize + "\", \"mapSeed\":\"" + mapSeed + "\", \"maximumPlayerCount\":\"" + maximumPlayerCount + "\", \"levelURL\":\"" + levelURL + "\", \"serverTimeZoneOffset\":\"" + serverTimeZoneOffset + "\"}";
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverName\":\"" + serverName + "\", \"serverProtocol\":\"" + serverProtocol + "\", \"oxideVersion\":\"" + oxideVersion + "\", \"pluginVersion\":\"" + pluginVersion + "\", \"datePluginLastInitialised\":\"" + datePluginLastInitialised + "\", \"serverIPAddress\":\"" + serverIPAddress + "\", \"serverPort\":\"" + serverPort + "\", \"mapSize\":\"" + mapSize + "\", \"mapSeed\":\"" + mapSeed + "\", \"maximumPlayerCount\":\"" + maximumPlayerCount + "\", \"levelURL\":\"" + levelURL + "\", \"serverTimeZoneOffset\":\"" + serverTimeZoneOffset + "\", \"pluginReload\":" + pluginReload + "}";
 
 				GenericWebRequest(endpoint, payload);
 

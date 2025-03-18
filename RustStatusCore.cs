@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.61")]
+	[Info("Rust Status", "ruststatus.com", "0.1.70")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -67,9 +67,14 @@ namespace Oxide.Plugins {
 		int lowFPS = 0;
 		int performanceRangeLastSent;
 
+		bool restartServerOnSustainedLowFrameRate = false;
+		bool restartInitiated = false;
+
+		int lowFrameRateCount = 0;
+
 		int maximumFrameRate = 0;
 		int minimumFrameRate = 0;
-		int minimumFrameRatePercentage = 15;
+		int minimumFrameRatePercentage;
 
 		private readonly Dictionary<string, string> header = new Dictionary<string, string> {
 			["Content-Type"] = "application/json"
@@ -99,7 +104,9 @@ namespace Oxide.Plugins {
 			Config["lowFPS"] = 0;
 			Config["performanceRangeLastSent"] = 0;
 
-			Config["minimumFrameRatePercentage"] = 15;
+			Config["restartServerOnSustainedLowFrameRate"] = false;
+
+			Config["minimumFrameRatePercentage"] = 35;
 
 			SaveConfig();
 
@@ -117,6 +124,8 @@ namespace Oxide.Plugins {
 			announcePlayerConnections = (bool)Config["announcePlayerConnections"];
 			announceNewPlayersOnly = (bool)Config["announceNewPlayersOnly"];
 			announceWhenPlayerCount = (int)Config["announceWhenPlayerCount"];
+
+			restartServerOnSustainedLowFrameRate = (bool)Config["restartServerOnSustainedLowFrameRate"];
 
 			minimumFrameRatePercentage = (int)Config["minimumFrameRatePercentage"];
 			
@@ -469,17 +478,45 @@ namespace Oxide.Plugins {
 
 				if (fps < minimumFrameRate) {
 
+					lowFrameRateCount++;
+
+
+					// Send Discord alerts
+
 					if (discordWebhookServerStatus != "") {
 
-						string alertType = "low-frame-rate";
+						if (lowFrameRateCount == 10) {
 
-						string path = "server/status/alert.php";
-						string endpoint = hostname + "/" + version + "/" + path;
-						string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\", \"currentFrameRate\":\"" + fps + "\", \"minimumFrameRate\":\"" + minimumFrameRate + "\", \"maximumFrameRate\":\"" + maximumFrameRate + "\"}";
+							string alertType = "low-frame-rate";
 
-						GenericWebRequest(endpoint, payload);
+							string path = "server/status/alert.php";
+							string endpoint = hostname + "/" + version + "/" + path;
+							string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\", \"currentFrameRate\":\"" + fps + "\", \"minimumFrameRate\":\"" + minimumFrameRate + "\", \"maximumFrameRate\":\"" + maximumFrameRate + "\"}";
+
+							GenericWebRequest(endpoint, payload);
+						
+						} else if ((lowFrameRateCount == 30) && (restartServerOnSustainedLowFrameRate) && (restartInitiated == false)) {
+
+							string alertType = "restart-initiated";
+							string restartReason = "low-frame-rate";
+
+							string path = "server/status/alert.php";
+							string endpoint = hostname + "/" + version + "/" + path;
+							string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"restartReason\":\"" + restartReason + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\"}";
+
+							GenericWebRequest(endpoint, payload);
+
+							Puts("Initiate standard server restart.");
+
+							restartInitiated = true;
+
+						}
 
 					}
+
+				} else {
+
+					lowFrameRateCount = 0;
 
 				}
 

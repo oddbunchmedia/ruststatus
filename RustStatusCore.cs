@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.70")]
+	[Info("Rust Status", "ruststatus.com", "0.1.75")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -346,10 +346,11 @@ namespace Oxide.Plugins {
 
 			if (discordWebhookServerWipes != "") {
 
-				serverName = ConVar.Server.hostname;
+				string alertType = "map-wipe";
 
-				string endpoint = discordWebhookServerWipes;
-				string payload = "{\"content\": \"**" + serverName + "** was just wiped.\"}";
+				string path = "server/status/alert.php";
+				string endpoint = hostname + "/" + version + "/" + path;
+				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\"}";
 
 				GenericWebRequest(endpoint, payload);
 
@@ -491,7 +492,7 @@ namespace Oxide.Plugins {
 
 							string path = "server/status/alert.php";
 							string endpoint = hostname + "/" + version + "/" + path;
-							string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\", \"currentFrameRate\":\"" + fps + "\", \"minimumFrameRate\":\"" + minimumFrameRate + "\", \"maximumFrameRate\":\"" + maximumFrameRate + "\"}";
+							string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"currentFrameRate\":\"" + fps + "\", \"minimumFrameRate\":\"" + minimumFrameRate + "\", \"maximumFrameRate\":\"" + maximumFrameRate + "\"}";
 
 							GenericWebRequest(endpoint, payload);
 						
@@ -502,12 +503,14 @@ namespace Oxide.Plugins {
 
 							string path = "server/status/alert.php";
 							string endpoint = hostname + "/" + version + "/" + path;
-							string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"restartReason\":\"" + restartReason + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\"}";
+							string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"restartReason\":\"" + restartReason + "\"}";
 
 							GenericWebRequest(endpoint, payload);
 
-							Puts("Initiate standard server restart.");
 
+							// Initialise restart
+
+							rust.RunServerCommand("restart 1800");
 							restartInitiated = true;
 
 						}
@@ -567,7 +570,7 @@ namespace Oxide.Plugins {
 
 					string path = "server/status/alert.php";
 					string endpoint = hostname + "/" + version + "/" + path;
-					string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"discordWebhook\":\"" + discordWebhookServerStatus + "\", \"serverName\":\"" + serverName + "\", \"clientProtocol\":\"" + clientProtocol + "\", \"serverProtocol\":\"" + serverProtocol + "\"}";
+					string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"clientProtocol\":\"" + clientProtocol + "\", \"serverProtocol\":\"" + serverProtocol + "\"}";
 
 					GenericWebRequest(endpoint, payload);
 

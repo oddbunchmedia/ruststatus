@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.75")]
+	[Info("Rust Status", "ruststatus.com", "0.1.77")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -37,9 +37,9 @@ namespace Oxide.Plugins {
 		string serverName;
 		uint serverProtocol;
 
-		string discordWebhookServerWipes;
-		string discordWebhookServerStatus;
-		string discordWebhookPlayerBanStatus;
+		bool discordWebhookServerWipesIsSet = false;
+		bool discordWebhookServerStatusIsSet = false;
+		bool discordWebhookPlayerBanStatusIsSet = false;
 
 		bool suppressProtocolMismatchMessages = false;
 
@@ -251,9 +251,9 @@ namespace Oxide.Plugins {
 
 				// Set Discord endpoints
 
-				discordWebhookServerWipes = (string)json["webhooks"]["discordWebhookServerWipes"];
-				discordWebhookServerStatus = (string)json["webhooks"]["discordWebhookServerStatus"];
-				discordWebhookPlayerBanStatus = (string)json["webhooks"]["discordWebhookPlayerBanStatus"];
+				discordWebhookServerWipesIsSet = (bool)json["webhooks"]["discordWebhookServerWipesIsSet"];
+				discordWebhookServerStatusIsSet = (bool)json["webhooks"]["discordWebhookServerStatusIsSet"];
+				discordWebhookPlayerBanStatusIsSet = (bool)json["webhooks"]["discordWebhookPlayerBanStatusIsSet"];
 			
 
 				// Set server description
@@ -344,7 +344,7 @@ namespace Oxide.Plugins {
 
 			}
 
-			if (discordWebhookServerWipes != "") {
+			if (discordWebhookServerWipesIsSet) {
 
 				string alertType = "map-wipe";
 
@@ -484,7 +484,7 @@ namespace Oxide.Plugins {
 
 					// Send Discord alerts
 
-					if (discordWebhookServerStatus != "") {
+					if (discordWebhookServerStatusIsSet) {
 
 						if (lowFrameRateCount == 10) {
 
@@ -560,7 +560,7 @@ namespace Oxide.Plugins {
 
 		void OnClientAuth(Connection connection) {
 
-			if ((discordWebhookServerStatus != "") && (suppressProtocolMismatchMessages == false)) {
+			if ((discordWebhookServerStatusIsSet) && (suppressProtocolMismatchMessages == false)) {
 
 				uint clientProtocol = connection.protocol;
 
@@ -591,7 +591,7 @@ namespace Oxide.Plugins {
 
 				string path = "bans/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\", \"reason\":\"" + reason + "\", \"discordWebhook\":\"" + discordWebhookPlayerBanStatus + "\", \"serverName\":\"" + serverName + "\"}";
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\", \"reason\":\"" + reason + "\"}";
 
 				GenericWebRequest(endpoint, payload);
 
@@ -605,7 +605,7 @@ namespace Oxide.Plugins {
 
 				string path = "bans/delete.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\", \"discordWebhook\":\"" + discordWebhookPlayerBanStatus + "\"}";
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\"}";
 
 				GenericWebRequest(endpoint, payload);
 

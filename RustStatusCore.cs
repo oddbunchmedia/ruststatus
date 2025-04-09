@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.77")]
+	[Info("Rust Status", "ruststatus.com", "0.1.79")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -34,7 +34,6 @@ namespace Oxide.Plugins {
 		string serverSecretKey;
 		string serverGroupSecretKey;
 
-		string serverName;
 		uint serverProtocol;
 
 		bool discordWebhookServerWipesIsSet = false;
@@ -139,7 +138,6 @@ namespace Oxide.Plugins {
 
 		void OnServerInitialized(bool initial) {
 
-			serverName = ConVar.Server.hostname;
 			serverProtocol = Rust.Protocol.network;
 
 			int hourAgo = GetTimestamp() - 3600;
@@ -384,7 +382,7 @@ namespace Oxide.Plugins {
 
 				string path = "server/details/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverName\":\"" + serverName + "\", \"serverProtocol\":\"" + serverProtocol + "\", \"oxideVersion\":\"" + oxideVersion + "\", \"pluginVersion\":\"" + pluginVersion + "\", \"datePluginLastInitialised\":\"" + datePluginLastInitialised + "\", \"serverIPAddress\":\"" + serverIPAddress + "\", \"serverPort\":\"" + serverPort + "\", \"mapSize\":\"" + mapSize + "\", \"mapSeed\":\"" + mapSeed + "\", \"maximumPlayerCount\":\"" + maximumPlayerCount + "\", \"levelURL\":\"" + levelURL + "\", \"serverTimeZoneOffset\":\"" + serverTimeZoneOffset + "\", \"pluginReload\":" + pluginReload + "}";
+				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"serverProtocol\":\"" + serverProtocol + "\", \"oxideVersion\":\"" + oxideVersion + "\", \"pluginVersion\":\"" + pluginVersion + "\", \"datePluginLastInitialised\":\"" + datePluginLastInitialised + "\", \"serverIPAddress\":\"" + serverIPAddress + "\", \"serverPort\":\"" + serverPort + "\", \"mapSize\":\"" + mapSize + "\", \"mapSeed\":\"" + mapSeed + "\", \"maximumPlayerCount\":\"" + maximumPlayerCount + "\", \"levelURL\":\"" + levelURL + "\", \"serverTimeZoneOffset\":\"" + serverTimeZoneOffset + "\", \"pluginReload\":" + pluginReload + "}";
 
 				GenericWebRequest(endpoint, payload);
 

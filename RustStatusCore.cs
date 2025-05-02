@@ -16,21 +16,6 @@ using Oxide.Core.Plugins;
 using Oxide.Core.Libraries;
 
 
-
-
-// // using Oxide.Core;
-// using Oxide.Core.Libraries.Covalence;
-// // using Oxide.Core.Plugins;
-// using Rust;
-// // using System;
-// // using System.Collections.Generic;
-// // using System.Linq;
-// using System.Text;
-// // using UnityEngine;
-
-
-
-
 //
 //	This plugin is designed to work with the Rust Status APIs - https://ruststatus.com
 //
@@ -38,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.2.0")]
+	[Info("Rust Status", "ruststatus.com", "0.2.1")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {

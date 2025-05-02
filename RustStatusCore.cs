@@ -16,6 +16,21 @@ using Oxide.Core.Plugins;
 using Oxide.Core.Libraries;
 
 
+
+
+// // using Oxide.Core;
+// using Oxide.Core.Libraries.Covalence;
+// // using Oxide.Core.Plugins;
+// using Rust;
+// // using System;
+// // using System.Collections.Generic;
+// // using System.Linq;
+// using System.Text;
+// // using UnityEngine;
+
+
+
+
 //
 //	This plugin is designed to work with the Rust Status APIs - https://ruststatus.com
 //
@@ -23,16 +38,28 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.1.86")]
+	[Info("Rust Status", "ruststatus.com", "0.2.0")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
 
+		private ConfigData configData;
+
 		string hostname = "https://api.ruststatus.com";
 		string version = "v1";
 
-		string serverSecretKey;
 		string serverGroupSecretKey;
+		string serverSecretKey;
+
+		bool useCentralisedBans;
+		bool doHourlyBroadcast;
+		bool debug;
+
+		bool restartServerOnLowFramerate;
+		int framerateMinimumPercentage;
+		bool announcePlayerConnections;
+		bool announceNewPlayersOnly;
+		int announceWhenPlayerCount;
 
 		uint serverProtocol;
 
@@ -42,94 +69,47 @@ namespace Oxide.Plugins {
 
 		bool suppressProtocolMismatchMessages = false;
 
-		bool useCentralisedBans = false;
-
-		bool doHourlyBroadcast = false;
-		
-		bool announcePlayerConnections = false;
-		bool announceNewPlayersOnly = false;
-		int announceWhenPlayerCount = 0;
-
 		bool canSendToRustStatus = false;
 
-		bool debug = false;
+		int playerCountHigh;
+		int playerCountLow;
+		int playerCountRangeLastSent;
 
 		int playerCount = 0;
 
-		int highPlayerCount = 0;
-		int lowPlayerCount = 0;
-		int playerCountRangeLastSent;
+		int framerateHigh;
+		int framerateLow;
+		int framerateRangeLastSent;
 
 		int fps = 0;
 
-		int highFPS = 0;
-		int lowFPS = 0;
-		int performanceRangeLastSent;
-
-		bool restartServerOnSustainedLowFrameRate = false;
 		bool restartInitiated = false;
 
-		int lowFrameRateCount = 0;
-
-		int maximumFrameRate = 0;
-		int minimumFrameRate = 0;
-		int minimumFrameRatePercentage;
+		int framerateLowCount = 0;
+		int framerateMaximum = 0;
+		int framerateMinimum = 0;
 
 		private readonly Dictionary<string, string> header = new Dictionary<string, string> {
 			["Content-Type"] = "application/json"
 		};
 
-		protected override void LoadDefaultConfig() {
-
-			Config.Clear();
-
-			Config["serverSecretKey"] = "";
-			Config["serverGroupSecretKey"] = "";
-			
-			Config["useCentralisedBans"] = false;
-			Config["doHourlyBroadcast"] = false;
-			
-			Config["announcePlayerConnections"] = false;
-			Config["announceNewPlayersOnly"] = false;
-			Config["announceWhenPlayerCount"] = 0;
-			
-			Config["debug"] = false;
-
-			Config["highPlayerCount"] = 0;
-			Config["lowPlayerCount"] = 0;
-			Config["playerCountRangeLastSent"] = 0;
-
-			Config["highFPS"] = 0;
-			Config["lowFPS"] = 0;
-			Config["performanceRangeLastSent"] = 0;
-
-			Config["restartServerOnSustainedLowFrameRate"] = false;
-
-			Config["minimumFrameRatePercentage"] = 35;
-
-			SaveConfig();
-
-		}
-
 		void Init() {
 
-			serverSecretKey = (string)Config["serverSecretKey"];
-			serverGroupSecretKey = (string)Config["serverGroupSecretKey"];
-			
-			useCentralisedBans = (bool)Config["useCentralisedBans"];
-			
-			doHourlyBroadcast = (bool)Config["doHourlyBroadcast"];
-			
-			announcePlayerConnections = (bool)Config["announcePlayerConnections"];
-			announceNewPlayersOnly = (bool)Config["announceNewPlayersOnly"];
-			announceWhenPlayerCount = (int)Config["announceWhenPlayerCount"];
+			LoadConfigVariables();
 
-			restartServerOnSustainedLowFrameRate = (bool)Config["restartServerOnSustainedLowFrameRate"];
-
-			minimumFrameRatePercentage = (int)Config["minimumFrameRatePercentage"];
+			serverGroupSecretKey = configData.Keys.serverGroupSecretKey;
+			serverSecretKey = configData.Keys.serverSecretKey;
 			
-			debug = (bool)Config["debug"];
-
+			useCentralisedBans = configData.Services.useCentralisedBans;
+			doHourlyBroadcast = configData.Services.doHourlyBroadcast;
+			debug = configData.Services.debug;
+			
+			announcePlayerConnections = configData.Options.announcePlayerConnections;
+			announceNewPlayersOnly = configData.Options.announceNewPlayersOnly;
+			announceWhenPlayerCount = configData.Options.announceWhenPlayerCount;
+			restartServerOnLowFramerate = configData.Options.restartServerOnLowFramerate;
+			framerateMinimumPercentage = configData.Options.framerateMinimumPercentage;
+			
 			VerifyKeys();
 			
 			InitialiseServer();
@@ -145,44 +125,44 @@ namespace Oxide.Plugins {
 
 			// Player count range
 
-			highPlayerCount = (int)Config["highPlayerCount"];
+			playerCountHigh = configData.Store.playerCountHigh;
 
 			if (initial == true) {
-				lowPlayerCount = 0;
+				playerCountLow = 0;
 			} else {
-				lowPlayerCount = (int)Config["lowPlayerCount"];
+				playerCountLow = configData.Store.playerCountLow;
 			}
 
-			playerCountRangeLastSent = (int)Config["playerCountRangeLastSent"];
+			playerCountRangeLastSent = configData.Store.playerCountRangeLastSent;
 
 			if (playerCountRangeLastSent < hourAgo) {
 				SendHourlyPlayerCountRange();
 			}
 
 
-			// Server performance range
+			// Server framerate range
 
-			highFPS = (int)Config["highFPS"];
+			framerateHigh = configData.Store.framerateHigh;
 
 			if (initial == true) {
-				lowFPS = 0;
+				framerateLow = 0;
 			} else {
-				lowFPS = (int)Config["lowFPS"];
+				framerateLow = configData.Store.framerateLow;
 			}
 
-			performanceRangeLastSent = (int)Config["performanceRangeLastSent"];
+			framerateRangeLastSent = configData.Store.framerateRangeLastSent;
 
-			if (performanceRangeLastSent < hourAgo) {
-				SendHourlyPerformanceRange();
+			if (framerateRangeLastSent < hourAgo) {
+				SendHourlyFramerateRange();
 			}
 
 
 			// Server frame rates
 
-			maximumFrameRate = Application.targetFrameRate;
-			minimumFrameRate = ((maximumFrameRate * minimumFrameRatePercentage) / 100);
+			framerateMaximum = Application.targetFrameRate;
+			framerateMinimum = ((framerateMaximum * framerateMinimumPercentage) / 100);
 
-			SaveConfig();
+			SaveConfig(configData);
 
 
 			// Centralised bans
@@ -280,7 +260,7 @@ namespace Oxide.Plugins {
 				timer.Once(secondsToNextHour, () => {
 
 					SendHourlyPlayerCountRange();
-					SendHourlyPerformanceRange();
+					SendHourlyFramerateRange();
 
 					PerformHourlyBroadcast();
 
@@ -297,7 +277,7 @@ namespace Oxide.Plugins {
 			if (canSendToRustStatus) {
 
 				timer.Every(60f, () => {
-					HandlePerformanceRangeData();
+					HandleFramerateRangeData();
 				});
 
 				timer.Every(15f, () => {
@@ -402,20 +382,20 @@ namespace Oxide.Plugins {
 
 				string path = "statistics/player-count-range/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"highPlayerCount\":\"" + highPlayerCount + "\", \"lowPlayerCount\":\"" + lowPlayerCount  + "\", \"hour\":\"" + hour + "\"}";
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"playerCountHigh\":\"" + playerCountHigh + "\", \"playerCountLow\":\"" + playerCountLow  + "\", \"hour\":\"" + hour + "\"}";
 
 				GenericWebRequest(endpoint, payload);
 
-				highPlayerCount = playerCount;
-				lowPlayerCount = playerCount;
+				playerCountHigh = playerCount;
+				playerCountLow = playerCount;
 
-				Config["highPlayerCount"] = playerCount;
-				Config["lowPlayerCount"] = playerCount;
+				configData.Store.playerCountHigh = playerCount;
+				configData.Store.playerCountLow = playerCount;
 
 				playerCountRangeLastSent = GetTimestamp();
-				Config["playerCountRangeLastSent"] = playerCountRangeLastSent;
+				configData.Store.playerCountRangeLastSent = playerCountRangeLastSent;
 
-				SaveConfig();
+				SaveConfig(configData);
 
 			}
 
@@ -423,21 +403,21 @@ namespace Oxide.Plugins {
 
 		void UpdatePlayerCountRange() {
 
-			if (playerCount > highPlayerCount) {
+			if (playerCount > playerCountHigh) {
 
-				highPlayerCount = playerCount;
-				Config["highPlayerCount"] = highPlayerCount;
+				playerCountHigh = playerCount;
+				configData.Store.playerCountHigh = playerCountHigh;
 
-				SaveConfig();
+				SaveConfig(configData);
 
 			}
 
-			if (playerCount < lowPlayerCount) {
+			if (playerCount < playerCountLow) {
 
-				lowPlayerCount = playerCount;
-				Config["lowPlayerCount"] = lowPlayerCount;
+				playerCountLow = playerCount;
+				configData.Store.playerCountLow = playerCountLow;
 
-				SaveConfig();
+				SaveConfig(configData);
 
 			}
 
@@ -452,52 +432,52 @@ namespace Oxide.Plugins {
 		}
 
 
-		// Server performance
+		// Server framerate
 
-		void HandlePerformanceRangeData() {
+		void HandleFramerateRangeData() {
 
 			if (canSendToRustStatus) {
 
 				fps = Performance.report.frameRate;
 
-				if (fps > highFPS) {
-					highFPS = fps;
-					Config["highFPS"] = highFPS;
+				if (fps > framerateHigh) {
+					framerateHigh = fps;
+					configData.Store.framerateHigh = framerateHigh;
 				}
 
-				if (fps < lowFPS) {
-					lowFPS = fps;
-					Config["lowFPS"] = lowFPS;
+				if (fps < framerateLow) {
+					framerateLow = fps;
+					configData.Store.framerateLow = framerateLow;
 				}
 
-				SaveConfig();
+				SaveConfig(configData);
 
 
 				// Check against minimum framerate
 
-				if (fps < minimumFrameRate) {
+				if (fps < framerateMinimum) {
 
-					lowFrameRateCount++;
+					framerateLowCount++;
 
 
 					// Send Discord alerts
 
 					if (discordWebhookServerStatusIsSet) {
 
-						if (lowFrameRateCount == 10) {
+						if (framerateLowCount == 10) {
 
-							string alertType = "low-frame-rate";
+							string alertType = "low-framerate";
 
 							string path = "server/status/alert.php";
 							string endpoint = hostname + "/" + version + "/" + path;
-							string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"currentFrameRate\":\"" + fps + "\", \"minimumFrameRate\":\"" + minimumFrameRate + "\", \"maximumFrameRate\":\"" + maximumFrameRate + "\"}";
+							string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"framerateCurrent\":\"" + fps + "\", \"framerateMinimum\":\"" + framerateMinimum + "\", \"framerateMaximum\":\"" + framerateMaximum + "\"}";
 
 							GenericWebRequest(endpoint, payload);
 						
-						} else if ((lowFrameRateCount == 30) && (restartServerOnSustainedLowFrameRate) && (restartInitiated == false)) {
+						} else if ((framerateLowCount == 30) && (restartServerOnLowFramerate) && (restartInitiated == false)) {
 
 							string alertType = "restart-initiated";
-							string restartReason = "low-frame-rate";
+							string restartReason = "low-framerate";
 
 							string path = "server/status/alert.php";
 							string endpoint = hostname + "/" + version + "/" + path;
@@ -517,7 +497,7 @@ namespace Oxide.Plugins {
 
 				} else {
 
-					lowFrameRateCount = 0;
+					framerateLowCount = 0;
 
 				}
 
@@ -525,29 +505,29 @@ namespace Oxide.Plugins {
 
 		}
 
-		void SendHourlyPerformanceRange() {
+		void SendHourlyFramerateRange() {
 
 			if (canSendToRustStatus) {
 
 				var now = DateTime.Now.AddHours(-1);
 				var hour = now.Hour;
 
-				string path = "statistics/performance-range/put.php";
+				string path = "statistics/framerate-range/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"highFPS\":\"" + highFPS + "\", \"lowFPS\":\"" + lowFPS  + "\", \"hour\":\"" + hour + "\"}";
+				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"framerateHigh\":\"" + framerateHigh + "\", \"framerateLow\":\"" + framerateLow  + "\", \"hour\":\"" + hour + "\"}";
 
 				GenericWebRequest(endpoint, payload);
 
-				highFPS = fps;
-				lowFPS = fps;
+				framerateHigh = fps;
+				framerateLow = fps;
 
-				Config["highFPS"] = fps;
-				Config["lowFPS"] = fps;
+				configData.Store.framerateHigh = fps;
+				configData.Store.framerateLow = fps;
 
-				performanceRangeLastSent = GetTimestamp();
-				Config["performanceRangeLastSent"] = performanceRangeLastSent;
+				framerateRangeLastSent = GetTimestamp();
+				configData.Store.framerateRangeLastSent = framerateRangeLastSent;
 
-				SaveConfig();
+				SaveConfig(configData);
 
 			}
 
@@ -741,6 +721,111 @@ namespace Oxide.Plugins {
 		void DoChat(string chat) {
 
 			rust.BroadcastChat(null, chat);
+
+		}
+
+
+		// Config management
+
+		private void LoadConfigVariables() {
+
+			configData = Config.ReadObject<ConfigData>();
+
+			// if (configData.Version < new VersionNumber(0, 2, 0)) {
+			//	 configData.Store.other4 = 14;
+			// }
+
+			configData.Version = Version;
+
+			SaveConfig(configData);
+
+		}
+
+		protected override void LoadDefaultConfig() {
+
+			ConfigData configDefault = new() {
+
+				Keys = new Keys() {
+					serverGroupSecretKey = "",
+					serverSecretKey = ""
+				},
+				Services = new Services() {
+					useCentralisedBans = false,
+					doHourlyBroadcast = false,
+					debug = false
+				},
+				Options = new Options() {
+					restartServerOnLowFramerate = false,
+					framerateMinimumPercentage = 50,
+					announcePlayerConnections = false,
+					announceNewPlayersOnly = false,
+					announceWhenPlayerCount = 0
+				},
+				Store = new Store() {
+					playerCountHigh = 0,
+					playerCountLow = 0,
+					playerCountRangeLastSent = 0,
+					framerateHigh = 0,
+					framerateLow = 0,
+					framerateRangeLastSent = 0
+				},
+				Version = Version
+
+			};
+
+			SaveConfig(configDefault);
+
+		}
+
+		private void SaveConfig(ConfigData config) {
+
+			Config.WriteObject(config, true);
+
+		}
+
+		private class ConfigData {
+
+			public Keys Keys;
+			public Services Services;
+			public Options Options;
+			public Store Store;
+			public VersionNumber Version;
+
+		}
+		
+		public class Keys {
+
+			public string serverGroupSecretKey;
+			public string serverSecretKey;
+
+		}
+		
+		public class Services {
+
+			public bool useCentralisedBans;
+			public bool doHourlyBroadcast;
+			public bool debug;
+
+		}
+		
+		public class Options {
+
+			public bool restartServerOnLowFramerate;
+			public int framerateMinimumPercentage;
+			public bool announcePlayerConnections;
+			public bool announceNewPlayersOnly;
+			public int announceWhenPlayerCount;
+
+		}
+		
+		public class Store {
+
+			public int playerCountHigh;
+			public int playerCountLow;
+			public int playerCountRangeLastSent;
+			public int framerateHigh;
+			public int framerateLow;
+			public int framerateRangeLastSent;
 
 		}
 

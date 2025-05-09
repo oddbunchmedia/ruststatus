@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.2.1")]
+	[Info("Rust Status", "ruststatus.com", "0.2.3")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -309,11 +309,67 @@ namespace Oxide.Plugins {
 
 			if (discordWebhookServerWipesIsSet) {
 
+				// Get monuments
+
+				Dictionary<string, bool> monumentDictionary = new Dictionary<string, bool>();
+
+				string[] monumentList = {
+					"Abandoned Military Base",
+					"Airfield",
+					"Arctic Research Base",
+					"Bandit Camp",
+					"Ferry Terminal",
+					"Giant Excavator Pit",
+					"Jungle Ziggurat",
+					"Junkyard",
+					"Large Harbor",
+					"Large Oil Rig",
+					"Launch Site",
+					"Lighthouse",
+					"Military Tunnel",
+					"Missile Silo",
+					"Outpost",
+					"Power Plant",
+					"Radtown",
+					"Satellite Dish",
+					"Sewer Branch",
+					"Small Harbor",
+					"Small Oil Rig",
+					"The Dome",
+					"Underwater Lab",
+					"Water Treatment Plant"
+				};
+
+				foreach (string monumentName in monumentList) {
+					monumentDictionary.Add(monumentName, false);
+				}
+
+				foreach (var monumentInfo in TerrainMeta.Path.Monuments.OrderBy(x => x.displayPhrase.english)) {
+
+					string monumentName = monumentInfo.displayPhrase.english.Replace("\n", String.Empty);
+
+					if (monumentName == "Harbor") {
+						monumentName = (monumentInfo.gameObject.name.Contains("_1") ? "Small " : "Large ") + monumentName;
+					} else if (monumentName == "Oil Rig") {
+						monumentName = "Small " + monumentName;
+					}
+
+					if (monumentDictionary.ContainsKey(monumentName)) {
+						monumentDictionary[monumentName] = true;
+					}
+
+				}
+
+				var monuments = JsonConvert.SerializeObject(monumentDictionary);
+
+
+				// Send payload
+
 				string alertType = "map-wipe";
 
 				string path = "server/status/alert.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\"}";
+				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"monuments\":" + monuments + "}";
 
 				GenericWebRequest(endpoint, payload);
 

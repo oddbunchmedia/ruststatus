@@ -202,9 +202,6 @@ namespace Oxide.Plugins {
 
 		void InitialiseServerCallback(int code, string response) {
 
-			Puts("Code: " + code);
-			Puts("Response: " + response);
-
 			var json = JObject.Parse(response);
 
 			if ((string)json["status"] == "ok") {

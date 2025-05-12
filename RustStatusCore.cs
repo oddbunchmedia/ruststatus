@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.2.5")]
+	[Info("Rust Status", "ruststatus.com", "0.2.7")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -192,7 +192,13 @@ namespace Oxide.Plugins {
 
 				string path = "initialise/fetch.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\": \"" + serverSecretKey + "\"}";
+
+				var data = new {
+					serverGroupSecretKey = serverGroupSecretKey,
+					serverSecretKey = serverSecretKey
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				webrequest.Enqueue(endpoint, payload, (code, response) => InitialiseServerCallback(code, response), this, RequestMethod.POST, header);
 
@@ -278,7 +284,13 @@ namespace Oxide.Plugins {
 
 				string path = "server/ping/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"activePlayerCount\":\"" + playerCount + "\"}";
+
+				var data = new {
+					serverSecretKey = serverSecretKey,
+					activePlayerCount = playerCount
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				GenericWebRequest(endpoint, payload);
 
@@ -295,7 +307,12 @@ namespace Oxide.Plugins {
 
 				string path = "server/wipe/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\"}";
+
+				var data = new {
+					serverSecretKey = serverSecretKey
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				GenericWebRequest(endpoint, payload);
 
@@ -354,7 +371,7 @@ namespace Oxide.Plugins {
 
 				}
 
-				var monuments = JsonConvert.SerializeObject(monumentDictionary);
+				// var monuments = JsonConvert.SerializeObject(monumentDictionary);
 
 
 				// Send payload
@@ -363,7 +380,15 @@ namespace Oxide.Plugins {
 
 				string path = "server/status/alert.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"monuments\":" + monuments + "}";
+
+				var data = new {
+					serverGroupSecretKey = serverGroupSecretKey,
+					serverSecretKey = serverSecretKey,
+					alertType = alertType,
+					monuments = monumentDictionary
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				GenericWebRequest(endpoint, payload);
 
@@ -378,7 +403,7 @@ namespace Oxide.Plugins {
 
 			if (canSendToRustStatus) {
 
-				var oxideVersion = Interface.Oxide.RootPluginManager.GetPlugin("RustCore").Version;
+				string oxideVersion = Interface.Oxide.RootPluginManager.GetPlugin("RustCore").Version.ToString();
 				int maximumPlayerCount = ConVar.Server.maxplayers;
 
 				string serverIPAddress = ConVar.Server.ip;
@@ -397,7 +422,25 @@ namespace Oxide.Plugins {
 
 				string path = "server/details/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"serverProtocol\":\"" + serverProtocol + "\", \"oxideVersion\":\"" + oxideVersion + "\", \"pluginVersion\":\"" + pluginVersion + "\", \"datePluginLastInitialised\":\"" + datePluginLastInitialised + "\", \"serverIPAddress\":\"" + serverIPAddress + "\", \"serverPort\":\"" + serverPort + "\", \"mapSize\":\"" + mapSize + "\", \"mapSeed\":\"" + mapSeed + "\", \"maximumPlayerCount\":\"" + maximumPlayerCount + "\", \"levelURL\":\"" + levelURL + "\", \"serverTimeZoneOffset\":\"" + serverTimeZoneOffset + "\", \"pluginReload\":" + pluginReload + "}";
+
+				var data = new {
+					serverGroupSecretKey = serverGroupSecretKey,
+					serverSecretKey = serverSecretKey,
+					serverProtocol = serverProtocol,
+					oxideVersion = oxideVersion,
+					pluginVersion = pluginVersion,
+					datePluginLastInitialised = datePluginLastInitialised,
+					serverIPAddress = serverIPAddress,
+					serverPort = serverPort,
+					mapSize = mapSize,
+					mapSeed = mapSeed,
+					maximumPlayerCount = maximumPlayerCount,
+					levelURL = levelURL,
+					serverTimeZoneOffset = serverTimeZoneOffset,
+					pluginReload = pluginReload
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				GenericWebRequest(endpoint, payload);
 
@@ -417,7 +460,15 @@ namespace Oxide.Plugins {
 
 				string path = "statistics/player-count-range/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"playerCountHigh\":\"" + playerCountHigh + "\", \"playerCountLow\":\"" + playerCountLow  + "\", \"hour\":\"" + hour + "\"}";
+
+				var data = new {
+					serverSecretKey = serverSecretKey,
+					playerCountHigh = playerCountHigh,
+					playerCountLow = playerCountLow,
+					hour = hour
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				GenericWebRequest(endpoint, payload);
 
@@ -505,7 +556,17 @@ namespace Oxide.Plugins {
 
 							string path = "server/status/alert.php";
 							string endpoint = hostname + "/" + version + "/" + path;
-							string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"framerateCurrent\":\"" + fps + "\", \"framerateMinimum\":\"" + framerateMinimum + "\", \"framerateMaximum\":\"" + framerateMaximum + "\"}";
+
+							var data = new {
+								serverGroupSecretKey = serverGroupSecretKey,
+								serverSecretKey = serverSecretKey,
+								alertType = alertType,
+								framerateCurrent = fps,
+								framerateMinimum = framerateMinimum,
+								framerateMaximum = framerateMaximum
+							};
+
+							string payload = JsonConvert.SerializeObject(data);
 
 							GenericWebRequest(endpoint, payload);
 						
@@ -516,7 +577,15 @@ namespace Oxide.Plugins {
 
 							string path = "server/status/alert.php";
 							string endpoint = hostname + "/" + version + "/" + path;
-							string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"restartReason\":\"" + restartReason + "\"}";
+
+							var data = new {
+								serverGroupSecretKey = serverGroupSecretKey,
+								serverSecretKey = serverSecretKey,
+								alertType = alertType,
+								restartReason = restartReason
+							};
+
+							string payload = JsonConvert.SerializeObject(data);
 
 							GenericWebRequest(endpoint, payload);
 
@@ -549,7 +618,15 @@ namespace Oxide.Plugins {
 
 				string path = "statistics/framerate-range/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"framerateHigh\":\"" + framerateHigh + "\", \"framerateLow\":\"" + framerateLow  + "\", \"hour\":\"" + hour + "\"}";
+
+				var data = new {
+					serverSecretKey = serverSecretKey,
+					framerateHigh = framerateHigh,
+					framerateLow = framerateLow,
+					hour = hour
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				GenericWebRequest(endpoint, payload);
 
@@ -583,7 +660,16 @@ namespace Oxide.Plugins {
 
 					string path = "server/status/alert.php";
 					string endpoint = hostname + "/" + version + "/" + path;
-					string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"serverSecretKey\":\"" + serverSecretKey + "\", \"alertType\":\"" + alertType + "\", \"clientProtocol\":\"" + clientProtocol + "\", \"serverProtocol\":\"" + serverProtocol + "\"}";
+
+					var data = new {
+						serverGroupSecretKey = serverGroupSecretKey,
+						serverSecretKey = serverSecretKey,
+						alertType = alertType,
+						clientProtocol = clientProtocol,
+						serverProtocol = serverProtocol
+					};
+
+					string payload = JsonConvert.SerializeObject(data);
 
 					GenericWebRequest(endpoint, payload);
 
@@ -604,7 +690,15 @@ namespace Oxide.Plugins {
 
 				string path = "bans/put.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\", \"reason\":\"" + reason + "\"}";
+
+				var data = new {
+					serverSecretKey = serverSecretKey,
+					serverGroupSecretKey = serverGroupSecretKey,
+					playerSteamID = id,
+					reason = reason
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				GenericWebRequest(endpoint, payload);
 
@@ -618,7 +712,14 @@ namespace Oxide.Plugins {
 
 				string path = "bans/delete.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\", \"playerSteamID\":\"" + id + "\"}";
+
+				var data = new {
+					serverSecretKey = serverSecretKey,
+					serverGroupSecretKey = serverGroupSecretKey,
+					playerSteamID = id
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				GenericWebRequest(endpoint, payload);
 
@@ -635,7 +736,12 @@ namespace Oxide.Plugins {
 
 				string path = "broadcast/fetch.php";
 				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverGroupSecretKey\":\"" + serverGroupSecretKey + "\"}";
+
+				var data = new {
+					serverGroupSecretKey = serverGroupSecretKey
+				};
+
+				string payload = JsonConvert.SerializeObject(data);
 
 				webrequest.Enqueue(endpoint, payload, (code, response) => PerformHourlyBroadcastCallback(code, response), this, RequestMethod.POST, header);
 
@@ -683,6 +789,8 @@ namespace Oxide.Plugins {
 		}
 
 		void GenericCallback(int code, string response) {
+
+			Puts("Code: " + code + " | Response: " + response);
 
 			var json = JObject.Parse(response);
 

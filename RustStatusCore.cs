@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.2.3")]
+	[Info("Rust Status", "ruststatus.com", "0.2.5")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -42,9 +42,6 @@ namespace Oxide.Plugins {
 
 		bool restartServerOnLowFramerate;
 		int framerateMinimumPercentage;
-		bool announcePlayerConnections;
-		bool announceNewPlayersOnly;
-		int announceWhenPlayerCount;
 
 		uint serverProtocol;
 
@@ -89,9 +86,6 @@ namespace Oxide.Plugins {
 			doHourlyBroadcast = configData.Services.doHourlyBroadcast;
 			debug = configData.Services.debug;
 			
-			announcePlayerConnections = configData.Options.announcePlayerConnections;
-			announceNewPlayersOnly = configData.Options.announceNewPlayersOnly;
-			announceWhenPlayerCount = configData.Options.announceWhenPlayerCount;
 			restartServerOnLowFramerate = configData.Options.restartServerOnLowFramerate;
 			framerateMinimumPercentage = configData.Options.framerateMinimumPercentage;
 			
@@ -207,6 +201,9 @@ namespace Oxide.Plugins {
 		}
 
 		void InitialiseServerCallback(int code, string response) {
+
+			Puts("Code: " + code);
+			Puts("Response: " + response);
 
 			var json = JObject.Parse(response);
 
@@ -673,47 +670,6 @@ namespace Oxide.Plugins {
 		}
 
 
-		// Player usage
-
-		void OnPlayerConnected(BasePlayer player) {
-
-			if (canSendToRustStatus) {
-
-				string playerSteamID = player.UserIDString;
-				string playerDisplayName = player.displayName;
-
-				string path = "players/connected.php";
-				string endpoint = hostname + "/" + version + "/" + path;
-				string payload = "{\"serverSecretKey\":\"" + serverSecretKey + "\", \"playerSteamID\":\"" + playerSteamID + "\"}";
-
-				webrequest.Enqueue(endpoint, payload, (code, response) => OnPlayerConnectedCallback(code, response, playerDisplayName), this, RequestMethod.POST, header);
-
-			}
-
-		}
-
-		void OnPlayerConnectedCallback(int code, string response, string playerDisplayName) {
-
-			var json = JObject.Parse(response);
-
-			if (((string)json["status"] == "ok") && (announcePlayerConnections)) {
-
-				string dateFirstJoined = (string)json["dateFirstJoined"];
-				string appearances = (string)json["appearances"];
-
-				if (appearances == "1") {
-					DoChat("<color=#FFE893>" + playerDisplayName + "</color> <color=#FFDB58>just connected: this is their</color> <color=#FFE893>first time joining the server</color><color=#FFDB58>.</color>");
-				} else {
-					if (announceNewPlayersOnly == false) {
-						DoChat("<color=#FFE893>" + playerDisplayName + "</color> <color=#FFDB58>just connected: they have been seen <color=#FFE893>" + appearances + " times</color> <color=#FFDB58>since the</color> <color=#FFE893>" + dateFirstJoined + "</color><color=#FFDB58>.</color>");
-					}
-				}
-
-			}
-
-		}
-
-
 		// WebRequests
 
 		void GenericWebRequest(string endpoint, string payload) {
@@ -772,7 +728,7 @@ namespace Oxide.Plugins {
 
 			configData = Config.ReadObject<ConfigData>();
 
-			// if (configData.Version < new VersionNumber(0, 2, 0)) {
+			// if (configData.Version < new VersionNumber(0, 2, 4)) {
 			//	 configData.Store.other4 = 14;
 			// }
 
@@ -797,10 +753,7 @@ namespace Oxide.Plugins {
 				},
 				Options = new Options() {
 					restartServerOnLowFramerate = false,
-					framerateMinimumPercentage = 50,
-					announcePlayerConnections = false,
-					announceNewPlayersOnly = false,
-					announceWhenPlayerCount = 0
+					framerateMinimumPercentage = 50
 				},
 				Store = new Store() {
 					playerCountHigh = 0,
@@ -853,9 +806,6 @@ namespace Oxide.Plugins {
 
 			public bool restartServerOnLowFramerate;
 			public int framerateMinimumPercentage;
-			public bool announcePlayerConnections;
-			public bool announceNewPlayersOnly;
-			public int announceWhenPlayerCount;
 
 		}
 		

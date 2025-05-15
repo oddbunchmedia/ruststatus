@@ -23,7 +23,7 @@ using Oxide.Core.Libraries;
 
 namespace Oxide.Plugins {
 
-	[Info("Rust Status", "ruststatus.com", "0.2.7")]
+	[Info("Rust Status", "ruststatus.com", "0.2.9")]
 	[Description("The plugin component of the Rust Status platform.")]
 
 	class RustStatusCore : RustPlugin {
@@ -176,13 +176,9 @@ namespace Oxide.Plugins {
 
 		void VerifyKeys() {
 
-			bool verified = false;
-
 			if ((serverGroupSecretKey != "") && (serverSecretKey != "")) {
-				verified = true;
+				canSendToRustStatus = true;
 			}
-
-			canSendToRustStatus = verified;
 
 		}
 
@@ -231,6 +227,10 @@ namespace Oxide.Plugins {
 				if ((string)json["server"]["headerimage"] != "") {
 					ConVar.Server.headerimage = (string)json["server"]["headerimage"];
 				}
+
+			} else if ((string)json["status"] == "error") {
+
+				Puts((string)json["message"]);
 
 			}
 
@@ -370,8 +370,6 @@ namespace Oxide.Plugins {
 					}
 
 				}
-
-				// var monuments = JsonConvert.SerializeObject(monumentDictionary);
 
 
 				// Send payload
@@ -789,8 +787,6 @@ namespace Oxide.Plugins {
 		}
 
 		void GenericCallback(int code, string response) {
-
-			Puts("Code: " + code + " | Response: " + response);
 
 			var json = JObject.Parse(response);
 
